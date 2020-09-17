@@ -1,6 +1,10 @@
+import { Session } from '@sentry/hub';
 import { Event } from '@sentry/types';
 
 import { API } from './api';
+
+// TODO: Introduce Envelope class that can handle 3 different types of request that we already have
+//       The same as it's done in Python.
 
 /** A generic client request. */
 export interface SentryRequest {
@@ -11,6 +15,21 @@ export interface SentryRequest {
   // requests, we can use the same approach for @sentry/browser and @sentry/node
   // for simplicity -- no headers involved.
   // headers: { [key: string]: string };
+}
+
+/** Creates a SentryRequest from an event. */
+export function sessionToSentryRequest(session: Session, api: API): SentryRequest {
+  const envelopeHeaders = JSON.stringify({
+    sent_at: new Date(timestampWithMs() * 1000).toISOString(),
+  });
+  const itemHeaders = JSON.stringify({
+    type: 'session',
+  });
+
+  return {
+    body: `${envelopeHeaders}\n${itemHeaders}\n${JSON.stringify(session)}`,
+    url: api.getEnvelopeEndpointWithUrlEncodedAuth(),
+  };
 }
 
 /** Creates a SentryRequest from an event. */
