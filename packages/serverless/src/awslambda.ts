@@ -44,7 +44,7 @@ interface WrapperOptions {
  * We do it like this, so that we don't introduce any side-effects in this module, which makes it tree-shakeable.
  * @param scope Scope that processor should be added to
  */
-function addServerlessEventProcessor(scope: Scope): void {
+export function addServerlessEventProcessor(scope: Scope): void {
   scope.addEventProcessor(event => {
     event.sdk = {
       ...event.sdk,
@@ -74,7 +74,7 @@ function addServerlessEventProcessor(scope: Scope): void {
  * @param scope Scope that should be enhanced
  * @param context AWS Lambda context that will be used to extract some part of the data
  */
-function enhanceScopeWithEnvironmentData(scope: Scope, context: Context): void {
+export function enhanceScopeWithEnvironmentData(scope: Scope, context: Context): void {
   scope.setTransactionName(context.functionName);
 
   scope.setTag('server_name', process.env._AWS_XRAY_DAEMON_ADDRESS || process.env.SENTRY_NAME || hostname());
