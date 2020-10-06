@@ -146,7 +146,7 @@ describe('AWSLambda', () => {
 
   describe('wrapHandler() on sync handler', () => {
     test('successful execution', async () => {
-      expect.assertions(1);
+      expect.assertions(3);
 
       const handler: Handler = (_event, _context, callback) => {
         callback(null, 42);
@@ -154,10 +154,14 @@ describe('AWSLambda', () => {
       const wrappedHandler = wrapHandler(handler);
       const rv = await wrappedHandler(fakeEvent, fakeContext, fakeCallback);
       expect(rv).toStrictEqual(42);
+      // @ts-ignore see "Why @ts-ignore" note
+      expect(Sentry.fakeHub.pushScope).toHaveBeenCalled();
+      // @ts-ignore see "Why @ts-ignore" note
+      expect(Sentry.fakeHub.popScope).toHaveBeenCalled();
     });
 
     test('unsuccessful execution', async () => {
-      expect.assertions(2);
+      expect.assertions(4);
 
       const error = new Error('sorry');
       const handler: Handler = (_event, _context, callback) => {
@@ -170,6 +174,10 @@ describe('AWSLambda', () => {
       } catch (e) {
         expect(Sentry.captureException).toBeCalledWith(error);
         expect(Sentry.flush).toBeCalledWith(2000);
+        // @ts-ignore see "Why @ts-ignore" note
+        expect(Sentry.fakeHub.pushScope).toHaveBeenCalled();
+        // @ts-ignore see "Why @ts-ignore" note
+        expect(Sentry.fakeHub.popScope).toHaveBeenCalled();
       }
     });
 
@@ -205,7 +213,7 @@ describe('AWSLambda', () => {
 
   describe('wrapHandler() on async handler', () => {
     test('successful execution', async () => {
-      expect.assertions(1);
+      expect.assertions(3);
 
       const handler: Handler = async (_event, _context) => {
         return 42;
@@ -213,6 +221,10 @@ describe('AWSLambda', () => {
       const wrappedHandler = wrapHandler(handler);
       const rv = await wrappedHandler(fakeEvent, fakeContext, fakeCallback);
       expect(rv).toStrictEqual(42);
+      // @ts-ignore see "Why @ts-ignore" note
+      expect(Sentry.fakeHub.pushScope).toHaveBeenCalled();
+      // @ts-ignore see "Why @ts-ignore" note
+      expect(Sentry.fakeHub.popScope).toHaveBeenCalled();
     });
 
     test('event and context are correctly passed to the original handler', async () => {
@@ -227,7 +239,7 @@ describe('AWSLambda', () => {
     });
 
     test('capture error', async () => {
-      expect.assertions(2);
+      expect.assertions(4);
 
       const error = new Error('wat');
       const handler: Handler = async (_event, _context) => {
@@ -240,6 +252,10 @@ describe('AWSLambda', () => {
       } catch (e) {
         expect(Sentry.captureException).toBeCalled();
         expect(Sentry.flush).toBeCalled();
+        // @ts-ignore see "Why @ts-ignore" note
+        expect(Sentry.fakeHub.pushScope).toHaveBeenCalled();
+        // @ts-ignore see "Why @ts-ignore" note
+        expect(Sentry.fakeHub.popScope).toHaveBeenCalled();
       }
     });
   });

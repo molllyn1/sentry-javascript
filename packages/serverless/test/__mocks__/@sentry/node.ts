@@ -8,8 +8,13 @@ export const fakeScope = {
   setTag: jest.fn(),
   setContext: jest.fn(),
 };
+export const fakeHub = {
+  pushScope: jest.fn(() => fakeScope),
+  popScope: jest.fn(),
+};
 export const captureException = jest.fn();
 export const captureMessage = jest.fn();
+export const getCurrentHub = jest.fn(() => fakeHub);
 export const withScope = jest.fn(cb => cb(fakeScope));
 export const flush = jest.fn(() => Promise.resolve());
 

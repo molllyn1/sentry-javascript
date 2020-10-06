@@ -1,4 +1,13 @@
-import { captureException, captureMessage, flush, Scope, SDK_VERSION, Severity, withScope } from '@sentry/node';
+import {
+  captureException,
+  captureMessage,
+  flush,
+  getCurrentHub,
+  Scope,
+  SDK_VERSION,
+  Severity,
+  withScope,
+} from '@sentry/node';
 import { addExceptionMechanism } from '@sentry/utils';
 // NOTE: I have no idea how to fix this right now, and don't want to waste more time, as it builds just fine — Kamil
 // eslint-disable-next-line import/no-unresolved
@@ -112,6 +121,21 @@ function captureExceptionAsync(e: unknown, context: Context, options: Partial<Wr
   return flush(options.flushTimeout);
 }
 
+/**
+ * Same as withScope, but returns the value returned by the callback.
+ * @param callback
+ */
+function withScope_<A>(callback: (scope: Scope) => A): A {
+  const hub = getCurrentHub();
+  const scope = hub.pushScope();
+
+  try {
+    return callback(scope);
+  } finally {
+    hub.popScope();
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const wrapHandler = <TEvent = any, TResult = any>(
   handler: Handler,
@@ -178,11 +202,15 @@ export const wrapHandler = <TEvent = any, TResult = any>(
       const isSyncHandler = handler.length === 3;
       const handlerRv = isSyncHandler
         ? await new Promise((resolve, reject) => {
-            const rv = (handler as SyncHandler<Handler<TEvent, TResult>>)(
-              event,
-              context,
-              callbackWrapper(callback, resolve, reject),
-            );
+            const rv = withScope_(scope => {
+              addServerlessEventProcessor(scope);
+              enhanceScopeWithEnvironmentData(scope, context);
+              return (handler as SyncHandler<Handler<TEvent, TResult>>)(
+                event,
+                context,
+                callbackWrapper(callback, resolve, reject),
+              );
+            });
 
             // This should never happen, but still can if someone writes a handler as
             // `async (event, context, callback) => {}`
@@ -190,7 +218,11 @@ export const wrapHandler = <TEvent = any, TResult = any>(
               ((rv as unknown) as Promise<TResult>).then(resolve, reject);
             }
           })
-        : await (handler as AsyncHandler<Handler<TEvent, TResult>>)(event, context);
+        : await withScope_(scope => {
+            addServerlessEventProcessor(scope);
+            enhanceScopeWithEnvironmentData(scope, context);
+            return (handler as AsyncHandler<Handler<TEvent, TResult>>)(event, context);
+          });
       clearTimeout(timeoutWarningTimer);
       return handlerRv;
     } catch (e) {
